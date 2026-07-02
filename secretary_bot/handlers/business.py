@@ -33,7 +33,11 @@ def extract_media(message: Message):
     return None, None
 
 
-@dp.business_message()
+def _is_not_command(message: Message) -> bool:
+    return not (message.text and message.text.startswith("/"))
+
+
+@dp.business_message(_is_not_command)
 async def on_business_message(message: Message):
     text = message.text or message.caption or ""
     media_type, file_id = extract_media(message)
