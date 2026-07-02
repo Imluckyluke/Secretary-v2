@@ -11,10 +11,11 @@ Also works the same way inside a registered home group (bot is a member).
 
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
+from aiogram.methods import GetChat
 from aiogram.types import Message
 
 from secretary_bot import db
-from secretary_bot.config import bot, dp, logger
+from secretary_bot.config import OWNER_ID, bot, dp, logger
 from secretary_bot.helpers import is_authorized_in_group, safe_reply
 
 
@@ -58,9 +59,9 @@ async def _resolve_target(target_arg, business_connection_id: str = None):
     query = f"@{value}" if kind == "username" else value
     try:
         if business_connection_id:
-            chat = await bot.get_chat(query, business_connection_id=business_connection_id)
+            chat = await bot(GetChat(chat_id=query), business_connection_id=business_connection_id)
         else:
-            chat = await bot.get_chat(query)
+            chat = await bot(GetChat(chat_id=query))
         return chat, None
     except TelegramBadRequest:
         if kind == "username":
@@ -101,6 +102,10 @@ async def cmd_info_home_group(message: Message, command: CommandObject):
 @dp.business_message(Command("info"))
 async def cmd_info_business(message: Message, command: CommandObject):
     """/info sent from a business-connected account."""
+    connected = await db.connection_owner_user_id(message.business_connection_id)
+    if connected != OWNER_ID:
+        return
+
     fallback_user = None
     target_arg = None
 
@@ -113,8 +118,6 @@ async def cmd_info_business(message: Message, command: CommandObject):
 
     if fallback_user is None and target_arg is None:
         return
-
-    connected = await db.connection_owner_user_id(message.business_connection_id)
 
     if fallback_user is not None:
         extra = "(همین اکانت بیزینس)" if connected and fallback_user.id == connected else ""
