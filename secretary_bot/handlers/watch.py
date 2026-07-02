@@ -10,10 +10,11 @@ import asyncio
 
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
+from aiogram.methods import GetChat
 from aiogram.types import Message
 
 from secretary_bot import db
-from secretary_bot.config import PROFILE_WATCH_INTERVAL_SECONDS, bot, dp, logger
+from secretary_bot.config import OWNER_ID, PROFILE_WATCH_INTERVAL_SECONDS, bot, dp, logger
 from secretary_bot.helpers import chat_display_name, get_or_create_topic, safe_reply, safe_send_message, user_display_name
 
 
@@ -30,6 +31,9 @@ async def _resolve_target_user_id(message: Message, command: CommandObject):
 @dp.business_message(Command("watch"))
 async def cmd_watch(message: Message, command: CommandObject):
     """Usage: reply to a user's message with /watch, or /watch <user_id>."""
+    if not message.from_user or message.from_user.id != OWNER_ID:
+        return
+
     target_user_id, target_user = await _resolve_target_user_id(message, command)
     if not target_user_id:
         await bot.send_message(
@@ -44,7 +48,7 @@ async def cmd_watch(message: Message, command: CommandObject):
         return
 
     try:
-        chat = await bot.get_chat(target_user_id, business_connection_id=message.business_connection_id)
+        chat = await bot(GetChat(chat_id=target_user_id), business_connection_id=message.business_connection_id)
     except TelegramBadRequest as e:
         await bot.send_message(
             chat_id=message.chat.id,
@@ -73,6 +77,9 @@ async def cmd_watch(message: Message, command: CommandObject):
 
 @dp.business_message(Command("unwatch"))
 async def cmd_unwatch(message: Message, command: CommandObject):
+    if not message.from_user or message.from_user.id != OWNER_ID:
+        return
+
     target_user_id, target_user = await _resolve_target_user_id(message, command)
     if not target_user_id:
         await bot.send_message(
@@ -105,7 +112,7 @@ async def check_watched_profiles_once():
         row_id, owner_user_id, watched_user_id, business_connection_id, first_name, last_name, username, bio = row
 
         try:
-            chat = await bot.get_chat(watched_user_id, business_connection_id=business_connection_id)
+            chat = await bot(GetChat(chat_id=watched_user_id), business_connection_id=business_connection_id)
         except Exception as e:
             logger.warning(f"watch: failed to fetch profile for {watched_user_id}: {e}")
             continue
