@@ -2,10 +2,10 @@
 
 from secretary_bot.handlers import (  # noqa: F401
     membership,
+    info,
+    watch,
     business,
     edits,
     keywords,
     backup,
-    info,
-    watch,
 )
