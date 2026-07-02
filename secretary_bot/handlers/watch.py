@@ -119,7 +119,12 @@ async def check_watched_profiles_once():
         changes = [c for c in changes if c]
 
         if changes:
-            thread_id, home_chat_id = await get_or_create_topic(owner_user_id, watched_user_id, str(watched_user_id))
+            # Negative-offset pseudo chat_id so this never collides with a
+            # real Telegram chat_id in the topics table.
+            pseudo_chat_id = -(10_000_000_000 + watched_user_id)
+            thread_id, home_chat_id = await get_or_create_topic(
+                owner_user_id, pseudo_chat_id, f"👀 واچ {watched_user_id}"
+            )
             if thread_id is not None:
                 display_name = f"{chat.first_name or ''} {chat.last_name or ''}".strip() or str(watched_user_id)
                 report = f"🔔 تغییر پروفایل {display_name}:\n" + "\n".join(changes)
